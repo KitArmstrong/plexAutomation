@@ -1,7 +1,8 @@
-import dotenv from 'dotenv';
-dotenv.config();
+import * as dotenv from 'dotenv';
+import * as cron from 'node-cron';
 import axios from 'axios';
-import nodemailer from 'nodemailer';
+import * as nodemailer from 'nodemailer';
+dotenv.config();
 
 const RECENTLY_ADDED_COUNT = 10;
 const RECENT_ITEMS_URL = process.env.TAUTULLI_IP + '/api/v2?apikey=' + process.env.TAUTULLI_API_KEY + '&cmd=get_recently_added&count=' + RECENTLY_ADDED_COUNT;
@@ -10,12 +11,19 @@ const MEDIA_TYPES = {
     MOVIES: 'movie'
 };
 
-// Get the most recent plex items
-axios.get(RECENT_ITEMS_URL)
-    .then(response => emailItems(response))
-    .catch(error => {
-        console.log(error);
-    });
+cron.schedule('0 8 * * FRI', () => {
+    main();
+});
+
+// Main function called by the cron job
+function main() {
+    // Get the most recent plex items
+    axios.get(RECENT_ITEMS_URL)
+        .then(response => emailItems(response))
+        .catch(error => {
+            console.log(error);
+        });
+}
 
 // Email items from a HTTP response
 function emailItems(response) {
@@ -99,15 +107,15 @@ function buildEmailBody(recentlyAddedItems) {
         showList = '<h4>TV Shows</h4><ul style="list-style: none">';
         
         shows.forEach(show => {
-            showList += `<li><span style="font-weight: 700;">${show.show_title}</span> - ${show.title}</li>`;
+            showList += `<li><span style="font-weight: 700;">${show.show_title}</span> ${show.title} - New Episode</li>`;
         });
 
         showList += '</ul>';
     }
-
+ 
     // Add list to template
     const completeHtml = 
-        `<h2>Plex Media Server</h2>
+        `<h2>Plex Media Server - Weekly Update</h2>
         <h3>Most Recently Added Movies and Shows</h3>
         ${showList}
         ${movieList}`;
